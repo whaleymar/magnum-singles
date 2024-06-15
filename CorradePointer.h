@@ -123,7 +123,7 @@ constexpr DirectInitT DirectInit{DirectInitT::Init{}};
 
 constexpr InPlaceInitT InPlaceInit{InPlaceInitT::Init{}};
 
-}
+}  // namespace Corrade
 
 #endif
 #ifndef Corrade_Utility_Move_h
@@ -133,23 +133,29 @@ constexpr InPlaceInitT InPlaceInit{InPlaceInitT::Init{}};
 #include <utility>
 #endif
 
-namespace Corrade { namespace Utility {
+namespace Corrade {
+namespace Utility {
 
-template<class T> constexpr T&& forward(typename std::remove_reference<T>::type& t) noexcept {
+template <class T>
+constexpr T&& forward(typename std::remove_reference<T>::type& t) noexcept {
     return static_cast<T&&>(t);
 }
 
-template<class T> constexpr T&& forward(typename std::remove_reference<T>::type&& t) noexcept {
+template <class T>
+constexpr T&& forward(typename std::remove_reference<T>::type&& t) noexcept {
     static_assert(!std::is_lvalue_reference<T>::value, "T can't be a lvalue reference");
     return static_cast<T&&>(t);
 }
 
-template<class T> constexpr typename std::remove_reference<T>::type&& move(T&& t) noexcept {
+template <class T>
+constexpr typename std::remove_reference<T>::type&& move(T&& t) noexcept {
     return static_cast<typename std::remove_reference<T>::type&&>(t);
 }
 
 #ifndef CORRADE_MSVC2015_COMPATIBILITY
-template<class T> void swap(T& a, typename std::common_type<T>::type& b) noexcept(std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value) {
+template <class T>
+void swap(T& a,
+          typename std::common_type<T>::type& b) noexcept(std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value) {
     T tmp = static_cast<T&&>(a);
     a = static_cast<T&&>(b);
     b = static_cast<T&&>(tmp);
@@ -159,8 +165,10 @@ using std::swap;
 #endif
 
 #ifndef CORRADE_MSVC2015_COMPATIBILITY
-template<std::size_t size, class T> void swap(T(&a)[size], typename std::common_type<T(&)[size]>::type b) noexcept(std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value) {
-    for(std::size_t i = 0; i != size; ++i) {
+template <std::size_t size, class T>
+void swap(T (&a)[size], typename std::common_type<T (&)[size]>::type b) noexcept(std::is_nothrow_move_constructible<T>::value &&
+                                                                                 std::is_nothrow_move_assignable<T>::value) {
+    for (std::size_t i = 0; i != size; ++i) {
         T tmp = static_cast<T&&>(a[i]);
         a[i] = static_cast<T&&>(b[i]);
         b[i] = static_cast<T&&>(tmp);
@@ -168,172 +176,197 @@ template<std::size_t size, class T> void swap(T(&a)[size], typename std::common_
 }
 #endif
 
-}}
+}  // namespace Utility
+}  // namespace Corrade
 
 #endif
 #ifndef CORRADE_ASSERT
 #ifdef NDEBUG
-#define CORRADE_ASSERT(condition, message, returnValue) do {} while(false)
+#define CORRADE_ASSERT(condition, message, returnValue)                                                                                              \
+    do {                                                                                                                                             \
+    } while (false)
 #else
 #define CORRADE_ASSERT(condition, message, returnValue) assert(condition)
 #endif
 #endif
 #ifndef CORRADE_DEBUG_ASSERT
-#define CORRADE_DEBUG_ASSERT(condition, message, returnValue)               \
-    CORRADE_ASSERT(condition, message, returnValue)
+#define CORRADE_DEBUG_ASSERT(condition, message, returnValue) CORRADE_ASSERT(condition, message, returnValue)
 #endif
 #ifndef Corrade_Containers_Pointer_h
 #define Corrade_Containers_Pointer_h
 
-namespace Corrade { namespace Containers {
+namespace Corrade {
+namespace Containers {
 
 namespace Implementation {
-    template<class, class> struct PointerConverter;
+template <class, class>
+struct PointerConverter;
 
-    template<class T, class First, class ...Next> inline T* allocate(First&& first, Next&& ...next) {
-        return new T{Utility::forward<First>(first), Utility::forward<Next>(next)...};
-    }
-    template<class T> inline T* allocate() {
-        return new T();
-    }
-    #if defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
-    template<class T> inline T* allocate(const T& b) {
-        return new T(b);
-    }
-    template<class T> inline T* allocate(T&& b) {
-        return new T(Utility::move(b));
-    }
-    #endif
+template <class T, class First, class... Next>
+inline T* allocate(First&& first, Next&&... next) {
+    return new T{Utility::forward<First>(first), Utility::forward<Next>(next)...};
 }
+template <class T>
+inline T* allocate() {
+    return new T();
+}
+#if defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG) && __GNUC__ < 5
+template <class T>
+inline T* allocate(const T& b) {
+    return new T(b);
+}
+template <class T>
+inline T* allocate(T&& b) {
+    return new T(Utility::move(b));
+}
+#endif
+}  // namespace Implementation
 
-template<class T> class Pointer {
+template <class T>
+class Pointer {
     static_assert(!std::is_array<T>::value, "use Containers::Array for arrays instead");
 
-    public:
-        typedef T Type;
+public:
+    typedef T Type;
 
-        template<class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> /*implicit*/ Pointer(U) noexcept: _pointer{} {}
+    template <class U, class = typename std::enable_if<std::is_same<std::nullptr_t, U>::value>::type> /*implicit*/ Pointer(U) noexcept : _pointer{} {}
 
-        /*implicit*/ Pointer() noexcept: _pointer{} {}
+    /*implicit*/ Pointer() noexcept : _pointer{} {}
 
-        explicit Pointer(T* pointer) noexcept: _pointer{pointer} {}
+    explicit Pointer(T* pointer) noexcept : _pointer{pointer} {}
 
-        template<class ...Args> explicit Pointer(Corrade::InPlaceInitT, Args&&... args): _pointer{
-            Implementation::allocate<T>(Utility::forward<Args>(args)...)
-        } {}
+    template <class... Args>
+    explicit Pointer(Corrade::InPlaceInitT, Args&&... args) : _pointer{Implementation::allocate<T>(Utility::forward<Args>(args)...)} {}
 
-        template<class U, class = typename std::enable_if<std::is_base_of<T, U>::value>::type> /*implicit*/ Pointer(Pointer<U>&& other) noexcept: _pointer{other.release()} {}
+    template <class U, class = typename std::enable_if<std::is_base_of<T, U>::value>::type>
+    /*implicit*/ Pointer(Pointer<U>&& other) noexcept : _pointer{other.release()} {}
 
-        template<class U, class = decltype(Implementation::PointerConverter<T, U>::from(std::declval<U&&>()))> /*implicit*/ Pointer(U&& other) noexcept: Pointer{Implementation::PointerConverter<T, U>::from(Utility::move(other))} {}
+    template <class U, class = decltype(Implementation::PointerConverter<T, U>::from(std::declval<U&&>()))>
+    /*implicit*/ Pointer(U&& other) noexcept : Pointer{Implementation::PointerConverter<T, U>::from(Utility::move(other))} {}
 
-        Pointer(const Pointer<T>&) = delete;
+    Pointer(const Pointer<T>&) = delete;
 
-        Pointer(Pointer<T>&& other) noexcept: _pointer{other._pointer} {
-            other._pointer = nullptr;
-        }
+    Pointer(Pointer<T>&& other) noexcept : _pointer{other._pointer} { other._pointer = nullptr; }
 
-        Pointer<T>& operator=(const Pointer<T>&) = delete;
+    Pointer<T>& operator=(const Pointer<T>&) = delete;
 
-        Pointer<T>& operator=(Pointer<T>&& other) noexcept {
-            Utility::swap(_pointer, other._pointer);
-            return *this;
-        }
+    Pointer<T>& operator=(Pointer<T>&& other) noexcept {
+        Utility::swap(_pointer, other._pointer);
+        return *this;
+    }
 
-        template<class U, class = decltype(Implementation::PointerConverter<T, U>::to(std::declval<Pointer<T>&&>()))> /*implicit*/ operator U() && {
-            return Implementation::PointerConverter<T, U>::to(Utility::move(*this));
-        }
+    template <class U, class = decltype(Implementation::PointerConverter<T, U>::to(std::declval<Pointer<T>&&>()))> /*implicit*/ operator U() && {
+        return Implementation::PointerConverter<T, U>::to(Utility::move(*this));
+    }
 
-        bool operator==(std::nullptr_t) const { return !_pointer; }
+    bool operator==(std::nullptr_t) const { return !_pointer; }
 
-        bool operator!=(std::nullptr_t) const { return _pointer; }
+    bool operator!=(std::nullptr_t) const { return _pointer; }
 
-        ~Pointer() { delete _pointer; }
+    ~Pointer() { delete _pointer; }
 
-        explicit operator bool() const { return _pointer; }
+    explicit operator bool() const { return _pointer; }
 
-        T* get() { return _pointer; }
-        const T* get() const { return _pointer; }
+    T* get() const { return _pointer; }
 
-        T* operator->() {
-            CORRADE_DEBUG_ASSERT(_pointer, "Containers::Pointer: the pointer is null", nullptr);
-            return _pointer;
-        }
+    T* operator->() {
+        CORRADE_DEBUG_ASSERT(_pointer, "Containers::Pointer: the pointer is null", nullptr);
+        return _pointer;
+    }
 
-        const T* operator->() const {
-            CORRADE_DEBUG_ASSERT(_pointer, "Containers::Pointer: the pointer is null", nullptr);
-            return _pointer;
-        }
+    T* operator->() const {
+        CORRADE_DEBUG_ASSERT(_pointer, "Containers::Pointer: the pointer is null", nullptr);
+        return _pointer;
+    }
 
-        T& operator*() {
-            CORRADE_DEBUG_ASSERT(_pointer, "Containers::Pointer: the pointer is null", *_pointer);
-            return *_pointer;
-        }
+    T& operator*() {
+        CORRADE_DEBUG_ASSERT(_pointer, "Containers::Pointer: the pointer is null", *_pointer);
+        return *_pointer;
+    }
 
-        const T& operator*() const {
-            CORRADE_DEBUG_ASSERT(_pointer, "Containers::Pointer: the pointer is null", *_pointer);
-            return *_pointer;
-        }
+    T& operator*() const {
+        CORRADE_DEBUG_ASSERT(_pointer, "Containers::Pointer: the pointer is null", *_pointer);
+        return *_pointer;
+    }
 
-        void reset(T* pointer = nullptr) {
-            delete _pointer;
-            _pointer = pointer;
-        }
+    void reset(T* pointer = nullptr) {
+        delete _pointer;
+        _pointer = pointer;
+    }
 
-        template<class ...Args> T& emplace(Args&&... args) {
-            delete _pointer;
-            _pointer = Implementation::allocate<T>(Utility::forward<Args>(args)...);
-            return *_pointer;
-        }
+    template <class... Args>
+    T& emplace(Args&&... args) {
+        delete _pointer;
+        _pointer = Implementation::allocate<T>(Utility::forward<Args>(args)...);
+        return *_pointer;
+    }
 
-        template<class U, class ...Args> U& emplace(Args&&... args) {
-            delete _pointer;
-            U* const derived = Implementation::allocate<U>(Utility::forward<Args>(args)...);
-            _pointer = derived;
-            return *derived;
-        }
+    template <class U, class... Args>
+    U& emplace(Args&&... args) {
+        delete _pointer;
+        U* const derived = Implementation::allocate<U>(Utility::forward<Args>(args)...);
+        _pointer = derived;
+        return *derived;
+    }
 
-        T* release() {
-            T* const out = _pointer;
-            _pointer = nullptr;
-            return out;
-        }
+    T* release() {
+        T* const out = _pointer;
+        _pointer = nullptr;
+        return out;
+    }
 
-    private:
-        T* _pointer;
+private:
+    T* _pointer;
 };
 
-template<class T> bool operator==(std::nullptr_t, const Pointer<T>& b) { return b == nullptr; }
+template <class T>
+bool operator==(std::nullptr_t, const Pointer<T>& b) {
+    return b == nullptr;
+}
 
-template<class T> bool operator!=(std::nullptr_t, const Pointer<T>& b) { return b != nullptr; }
+template <class T>
+bool operator!=(std::nullptr_t, const Pointer<T>& b) {
+    return b != nullptr;
+}
 
-template<class T> inline Pointer<T> pointer(T* pointer) {
-    static_assert(!std::is_constructible<T, T*>::value, "the type is constructible from its own pointer, which is ambiguous -- explicitly use the constructor instead");
+template <class T>
+inline Pointer<T> pointer(T* pointer) {
+    static_assert(!std::is_constructible<T, T*>::value,
+                  "the type is constructible from its own pointer, which is ambiguous -- explicitly use the constructor instead");
     return Pointer<T>{pointer};
 }
 
 namespace Implementation {
-    template<class> struct DeducedPointerConverter;
+template <class>
+struct DeducedPointerConverter;
 }
 
-template<class T> inline auto pointer(T&& other) -> decltype(Implementation::DeducedPointerConverter<T>::from(Utility::move(other))) {
+template <class T>
+inline auto pointer(T&& other) -> decltype(Implementation::DeducedPointerConverter<T>::from(Utility::move(other))) {
     return Implementation::DeducedPointerConverter<T>::from(Utility::move(other));
 }
 
-template<class U, class T> Pointer<U> pointerCast(Pointer<T>&& pointer) {
+template <class U, class T>
+Pointer<U> pointerCast(Pointer<T>&& pointer) {
     return Pointer<U>{static_cast<U*>(pointer.release())};
 }
 
 namespace Implementation {
-    template<class T, class ...Args> struct IsFirstAPointer: std::false_type {};
-    template<class T> struct IsFirstAPointer<T, T*>: std::true_type {};
-}
+template <class T, class... Args>
+struct IsFirstAPointer : std::false_type {};
+template <class T>
+struct IsFirstAPointer<T, T*> : std::true_type {};
+}  // namespace Implementation
 
-template<class T, class ...Args> inline Pointer<T> pointer(Args&&... args) {
-    static_assert(!Implementation::IsFirstAPointer<T, Args...>::value || !std::is_constructible<T, T*>::value, "attempt to construct a type from its own pointer, which is ambiguous --  explicitly use the constructor instead");
+template <class T, class... Args>
+inline Pointer<T> pointer(Args&&... args) {
+    static_assert(!Implementation::IsFirstAPointer<T, Args...>::value || !std::is_constructible<T, T*>::value,
+                  "attempt to construct a type from its own pointer, which is ambiguous --  explicitly use the constructor instead");
     return Pointer<T>{Corrade::InPlaceInit, Utility::forward<Args>(args)...};
 }
 
-}}
+}  // namespace Containers
+}  // namespace Corrade
 
 #endif
 #ifdef CORRADE_POINTER_STL_COMPATIBILITY
@@ -341,21 +374,23 @@ template<class T, class ...Args> inline Pointer<T> pointer(Args&&... args) {
 #ifndef Corrade_Containers_PointerStl_h
 #define Corrade_Containers_PointerStl_h
 
-namespace Corrade { namespace Containers { namespace Implementation {
+namespace Corrade {
+namespace Containers {
+namespace Implementation {
 
-template<class T> struct PointerConverter<T, std::unique_ptr<T>> {
-    static Pointer<T> from(std::unique_ptr<T>&& other) {
-        return Pointer<T>{other.release()};
-    }
+template <class T>
+struct PointerConverter<T, std::unique_ptr<T>> {
+    static Pointer<T> from(std::unique_ptr<T>&& other) { return Pointer<T>{other.release()}; }
 
-    static std::unique_ptr<T> to(Pointer<T>&& other) {
-        return std::unique_ptr<T>{other.release()};
-    }
+    static std::unique_ptr<T> to(Pointer<T>&& other) { return std::unique_ptr<T>{other.release()}; }
 };
 
-template<class T> struct DeducedPointerConverter<std::unique_ptr<T>>: PointerConverter<T, std::unique_ptr<T>> {};
+template <class T>
+struct DeducedPointerConverter<std::unique_ptr<T>> : PointerConverter<T, std::unique_ptr<T>> {};
 
-}}}
+}  // namespace Implementation
+}  // namespace Containers
+}  // namespace Corrade
 
 #endif
 #endif
